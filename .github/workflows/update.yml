@@ -29,7 +29,7 @@ jobs:
           PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
           PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
           AES_SECRET: ${{ secrets.AES_SECRET }}
-        run: python your_script_name.py # এখানে আপনার পাইথন ফাইলের নাম লিখুন (যেমন: main.py)
+        run: python scraper.py # এখানে আপনার পাইথন ফাইলের নাম লিখুন (যেমন: main.py)
 
       - name: Save Data
         run: |
