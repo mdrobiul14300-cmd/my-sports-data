@@ -1,32 +1,40 @@
 name: Auto Update Data
+
 on:
   schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+    - cron: '*/20 * * * *' # প্রতি ২০ মিনিট পর পর অটো চলবে
+  workflow_dispatch: # আপনি চাইলে নিজেও ক্লিক করে রান করতে পারবেন
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # এই নিচের ৩টি লাইন অবশ্যই যোগ করবেন
-    permissions:
-      contents: write
-      
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.x'
+
       - name: Install Libs
-        run: pip install requests pycryptodome
+        run: pip install requests pycryptodome # প্রয়োজনীয় লাইব্রেরি ইনস্টল
+
       - name: Run Scraper
         env:
-          MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
-          # যদি আপনার স্ক্র্যাপারে এই সিক্রেটগুলো লাগে তবে এখানে যোগ করতে পারেন
-        run: python scraper.py
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_FID: ${{ secrets.FIREBASE_FID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
+          PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
+          AES_SECRET: ${{ secrets.AES_SECRET }}
+        run: python your_script_name.py # এখানে আপনার পাইথন ফাইলের নাম লিখুন (যেমন: main.py)
+
       - name: Save Data
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add data.json
-          git commit -m "Update matches" || exit 0
+          git add Sportzx.json # এখানে আপনার কোডে দেওয়া ফাইলের নাম ঠিক থাকতে হবে
+          git commit -m "Auto Update Data" || exit 0
           git push
