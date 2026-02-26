@@ -3,6 +3,7 @@ import json
 import base64
 import os
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
 
 # 🔐 GitHub Secrets থেকে ভেরিয়েবলগুলো লোড করা
 APP_PASSWORD = os.getenv("APP_PASSWORD")
@@ -11,6 +12,7 @@ FIREBASE_FID = os.getenv("FIREBASE_FID")
 FIREBASE_APP_ID = os.getenv("FIREBASE_APP_ID")
 PROJECT_NUMBER = os.getenv("PROJECT_NUMBER")
 PACKAGE_NAME = os.getenv("PACKAGE_NAME")
+AES_SECRET = os.getenv("AES_SECRET") # আপনার নিজের ৩২ ক্যারেক্টারের সিক্রেট কী
 
 # লিঙ্ক রিপ্লেসমেন্ট রুলস
 REPLACE_STREAM = "https://video.twimg.com/amplify_video/1919602814160125952/pl/t5p2RHLI21i-hXga.m3u8?variant_version=1&tag=14"
@@ -61,8 +63,8 @@ class SportzxScraper:
             key, iv = self._generate_aes_key_iv(APP_PASSWORD)
             cipher = AES.new(key, AES.MODE_CBC, iv)
             pt = cipher.decrypt(ct)
-            pad = pt[-1]
-            if 1 <= pad <= 16: pt = pt[:-pad]
+            pad_val = pt[-1]
+            if 1 <= pad_val <= 16: pt = pt[:-pad_val]
             return pt.decode("utf-8", errors="replace")
         except:
             return ""
@@ -95,7 +97,6 @@ class SportzxScraper:
             return []
 
     def scrape_all_data(self):
-        """সোর্স থেকে ডাটা স্ক্র্যাপ করে মডিফাই করা"""
         api_url = self._get_api_url_from_firebase()
         if not api_url:
             print("❌ API URL পাওয়া যায়নি!")
@@ -109,7 +110,6 @@ class SportzxScraper:
 
         for event in events:
             if "formats" in event: del event["formats"]
-            
             eid = event.get("id")
             if eid:
                 channels = self._fetch_and_parse(f"{base_api}/channels/{eid}.json")
@@ -117,24 +117,36 @@ class SportzxScraper:
                     ch["title"] = ch.get("title", "").replace("Sportzx", "SPORTIFy").replace("SPX", "SPY")
                     if ch.get("link") == REPLACE_STREAM:
                         ch["link"] = NEW_STREAM
-                
                 event["channels_data"] = channels
         
         return events
 
-# 🔓 এনক্রিপশন ছাড়া সরাসরি সেভ করার ফাংশন
-def save_without_encryption(data):
+# 🔐 PHP ফ্রেন্ডলি এনক্রিপশন ফাংশন (AES-256-CBC)
+def save_with_encryption(data):
     if not data:
         print("⚠️ কোন ডাটা পাওয়া যায়নি, ফাইল সেভ করা হলো না।")
         return
 
-    with open("Sportzx.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    # কি (Key) ৩২ বাইট নিশ্চিত করা
+    key = AES_SECRET.encode('utf-8').ljust(32)[:32]
     
-    print("✅ সফলভাবে ডাটা স্ক্র্যাপ করে এনক্রিপশন ছাড়াই Sportzx.json তৈরি করা হয়েছে!")
+    # CBC মোড এবং র‍্যান্ডম IV তৈরি
+    cipher = AES.new(key, AES.MODE_CBC)
+    iv = cipher.iv
+    
+    # ডাটা প্যাডিং এবং এনক্রিপ্ট
+    json_data = json.dumps(data).encode('utf-8')
+    ciphertext = cipher.encrypt(pad(json_data, AES.block_size))
+    
+    # IV + Ciphertext একসাথে করে Base64 করা
+    # প্রথম ১৬ বাইট হলো IV, যা ডিক্রিপ্ট করতে লাগবে
+    final_blob = base64.b64encode(iv + ciphertext).decode('utf-8')
 
-# --- মেন ফাংশন ---
+    with open("Sportzx.json", "w", encoding="utf-8") as f:
+        json.dump({"data": final_blob}, f, indent=4)
+    print("✅ সফলভাবে এনক্রিপ্ট করে Sportzx.json তৈরি করা হয়েছে (PHP Compatible)!")
+
 if __name__ == "__main__":
     scraper = SportzxScraper()
     final_json_data = scraper.scrape_all_data()
-    save_without_encryption(final_json_data)
+    save_with_encryption(final_json_data)
