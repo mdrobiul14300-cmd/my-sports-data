@@ -1,0 +1,26 @@
+name: Auto Update Data
+on:
+  schedule:
+    - cron: '*/5 * * * *' # প্রতি ৫ মিনিটে চলবে
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Libs
+        run: pip install requests pycryptodome
+      - name: Run Scraper
+        env:
+          MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
+        run: python scraper.py
+      - name: Save Data
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add my_secure_data.json
+          git commit -m "Update" || exit 0
+          git push
