@@ -1,11 +1,16 @@
 name: Auto Update Data
 on:
   schedule:
-    - cron: '*/5 * * * *' # প্রতি ৫ মিনিটে চলবে
+    - cron: '*/5 * * * *'
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # এই নিচের ৩টি লাইন অবশ্যই যোগ করবেন
+    permissions:
+      contents: write
+      
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -16,11 +21,12 @@ jobs:
       - name: Run Scraper
         env:
           MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
+          # যদি আপনার স্ক্র্যাপারে এই সিক্রেটগুলো লাগে তবে এখানে যোগ করতে পারেন
         run: python scraper.py
       - name: Save Data
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add my_secure_data.json
-          git commit -m "Update" || exit 0
+          git add data.json
+          git commit -m "Update matches" || exit 0
           git push
