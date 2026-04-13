@@ -114,11 +114,18 @@ class SportzxScraper:
             if eid:
                 channels = self._fetch_and_parse(f"{base_api}/channels/{eid}.json")
                 for ch in channels:
-                    ch["title"] = ch.get("title", "").replace("Sportzx", "SPORTIFy").replace("SPX", "SPY")
+                    ch["title"] = (
+                        ch.get("title", "")
+                        .replace("S©portzX", "SportzUP")
+                        .replace("S©PX", "SUP")
+                        .replace("Sportzx", "SportzUP")
+                        .replace("SPX", "SUP")
+                        .replace("SPORTZX", "SportzUP")
+                        .replace("sportzx", "SportzUP")
+                    )
                     if ch.get("link") == REPLACE_STREAM:
                         ch["link"] = NEW_STREAM
                 event["channels_data"] = channels
-
         
         return events
 
