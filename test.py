@@ -146,7 +146,7 @@ def save_with_encryption(data):
     final_blob = base64.b64encode(iv + ciphertext).decode('utf-8')
 
     # ফাইলের নাম Sportzx.json থেকে পরিবর্তন করে data.json করা হয়েছে
-    with open("data.json", "w", encoding="utf-8") as f:
+    with open("Sportzx.json", "w", encoding="utf-8") as f:
         json.dump({"data": final_blob}, f, indent=4)
     print("✅ সফলভাবে এনক্রিপ্ট করে data.json তৈরি করা হয়েছে!")
 
