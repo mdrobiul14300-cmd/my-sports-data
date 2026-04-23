@@ -32,13 +32,13 @@ jobs:
           PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
           PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
           AES_SECRET: ${{ secrets.AES_SECRET }}
-        run: python test.py
+        run: python scraper.py
 
       - name: Save Data
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json
+          git add Sportzx.json
           git commit -m "Auto Update: $(date)" || exit 0
           git push
 
