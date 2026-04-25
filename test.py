@@ -3,11 +3,10 @@ import json
 import re
 import base64
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
-# 🔐 GitHub Secrets থেকে ভেরিয়েবলগুলো লোড করা
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
 FIREBASE_FID = os.getenv("FIREBASE_FID")
@@ -70,14 +69,27 @@ class SportzxScraper:
         try:
             r = self.session.post(
                 f"https://firebaseinstallations.googleapis.com/v1/projects/{PROJECT_NUMBER}/installations",
-                json={"fid": FIREBASE_FID, "appId": FIREBASE_APP_ID, "authVersion": "FIS_v2", "sdkVersion": "a:18.0.0"},
+                json={
+                    "fid": FIREBASE_FID,
+                    "appId": FIREBASE_APP_ID,
+                    "authVersion": "FIS_v2",
+                    "sdkVersion": "a:18.0.0"
+                },
                 headers={"x-goog-api-key": FIREBASE_API_KEY}
             )
             auth_token = r.json()["authToken"]["token"]
             r2 = self.session.post(
                 f"https://firebaseremoteconfig.googleapis.com/v1/projects/{PROJECT_NUMBER}/namespaces/firebase:fetch",
-                json={"appVersion": "2.1", "appInstanceId": FIREBASE_FID, "appId": FIREBASE_APP_ID, "packageName": PACKAGE_NAME},
-                headers={"X-Goog-Api-Key": FIREBASE_API_KEY, "X-Goog-Firebase-Installations-Auth": auth_token}
+                json={
+                    "appVersion": "2.1",
+                    "appInstanceId": FIREBASE_FID,
+                    "appId": FIREBASE_APP_ID,
+                    "packageName": PACKAGE_NAME
+                },
+                headers={
+                    "X-Goog-Api-Key": FIREBASE_API_KEY,
+                    "X-Goog-Firebase-Installations-Auth": auth_token
+                }
             )
             return r2.json().get("entries", {}).get("api_url")
         except:
@@ -98,9 +110,17 @@ class SportzxScraper:
             decoded = base64.b64decode(api_val).decode('utf-8')
             if ":" in decoded and len(decoded) > 30:
                 api_val = decoded
-        except Exception:
+        except:
             pass
-        correction_map = {'J': 'a', '$': '5', 'l': '2', 'Q': 'b', 'W': 'f', ')': '2', 'Z': 'a'}
+        correction_map = {
+            'J': 'a',
+            '$': '5',
+            'l': '2',
+            'Q': 'b',
+            'W': 'f',
+            ')': '2',
+            'Z': 'a',
+        }
         for wrong, right in correction_map.items():
             api_val = api_val.replace(wrong, right)
         return api_val
@@ -118,11 +138,10 @@ class SportzxScraper:
         return ch
 
     def _load_manual_data(self) -> dict:
-        manual_file = "manual_data.json"
-        if not os.path.exists(manual_file):
+        if not os.path.exists("manual_data.json"):
             return {}
         try:
-            with open(manual_file, "r", encoding="utf-8") as f:
+            with open("manual_data.json", "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return {}
@@ -137,39 +156,51 @@ class SportzxScraper:
     def _apply_manual_data(self, events: list, manual: dict) -> list:
         if not manual:
             return events
+
         now_utc = datetime.utcnow()
-        manual_events = manual.get("manual_events", [])
+
+        # মেয়াদ শেষ হয়নি এমন manual events রাখা
         valid_manual_events = []
-        for m_ev in manual_events:
+        for m_ev in manual.get("manual_events", []):
             end_time_str = m_ev.get("eventInfo", {}).get("endTime", "")
             try:
                 end_dt = datetime.strptime(end_time_str, "%Y/%m/%d %H:%M:%S +0000")
                 if now_utc < end_dt:
                     valid_manual_events.append(m_ev)
                 else:
-                    print(f"⏰ Manual event মেয়াদ শেষ: {m_ev.get('id')}")
+                    print(f"⏰ Expired event বাদ: {m_ev.get('id')}")
             except:
                 valid_manual_events.append(m_ev)
+
+        # Live event id list
         live_ids = {str(ev.get("id")) for ev in events}
+
+        # Manual events দিয়ে replace বা append
         for m_ev in valid_manual_events:
             m_id = str(m_ev.get("id"))
             if m_id in live_ids:
                 for i, ev in enumerate(events):
                     if str(ev.get("id")) == m_id:
                         events[i] = m_ev
-                        print(f"🔄 Event replace: {m_id}")
+                        print(f"🔄 Replace: {m_id}")
                         break
             else:
                 events.append(m_ev)
-                print(f"➕ নতুন manual event: {m_id}")
+                print(f"➕ নতুন event যোগ: {m_id}")
+
+        # Delete list অনুযায়ী বাদ দেওয়া
         delete_ids = {str(d) for d in manual.get("delete", [])}
         if delete_ids:
             before = len(events)
             events = [ev for ev in events if str(ev.get("id")) not in delete_ids]
             print(f"🗑️ {before - len(events)} টি event delete হলো।")
+
+        # manual_data.json আপডেট করা
         manual["manual_events"] = valid_manual_events
-        id_mapping = manual.get("id_mapping", {})
-        manual["id_mapping"] = {k: v for k, v in id_mapping.items() if k in live_ids}
+        manual["id_mapping"] = {
+            k: v for k, v in manual.get("id_mapping", {}).items()
+            if k in live_ids
+        }
         self._save_manual_data(manual)
         return events
 
@@ -179,23 +210,10 @@ class SportzxScraper:
             print("❌ API URL পাওয়া যায়নি!")
             return []
 
-        print(f"🔗 API URL Found: {api_url}")
+        print(f"🔗 API URL: {api_url}")
         base_api = api_url.rstrip('/')
 
-        # 🔍 DEBUG — কোন id তে channel data আছে দেখার জন্য
-        print("--- DEBUG START ---")
-        for test_id in ['364', '365', '366', '367', '368', '369', '370', '371']:
-            try:
-                r = self.session.get(f"{base_api}/channels/{test_id}.json", timeout=10)
-                data = r.json()
-                decrypted = self._decrypt_source_data(data.get("data", ""))
-                parsed = json.loads(decrypted) if decrypted else []
-                print(f"ID {test_id}: {len(parsed)} channels")
-            except:
-                print(f"ID {test_id}: ❌ empty/error")
-        print("--- DEBUG END ---")
-        # 🔍 DEBUG END
-
+        # Events list fetch
         events = self._fetch_and_parse(f"{base_api}/events.json")
         if not isinstance(events, list) or not events:
             print("❌ Events data পাওয়া যায়নি!")
@@ -203,9 +221,11 @@ class SportzxScraper:
 
         print(f"📋 মোট {len(events)} টি event পাওয়া গেছে।")
 
+        # Manual data লোড
         manual = self._load_manual_data()
         id_mapping = manual.get("id_mapping", {})
 
+        # প্রতিটি event এর channel fetch
         for event in events:
             if "formats" in event:
                 del event["formats"]
@@ -218,16 +238,17 @@ class SportzxScraper:
                 channels = []
             event["channels_data"] = [self._clean_channel(ch) for ch in channels]
             if fetch_id != eid:
-                print(f"🗺️ Event {eid} → channel id {fetch_id} ({len(channels)} channels)")
+                print(f"🗺️ Event {eid} → {fetch_id} ({len(channels)} channels)")
 
+        # Manual data apply
         events = self._apply_manual_data(events, manual)
-        print(f"✅ চূড়ান্তভাবে {len(events)} টি event প্রস্তুত।")
+        print(f"✅ মোট {len(events)} টি event প্রস্তুত।")
         return events
 
 
 def save_with_encryption(data: list):
     if not data:
-        print("⚠️ কোন ডাটা পাওয়া যায়নি।")
+        print("⚠️ কোন ডাটা নেই।")
         return
     key = AES_SECRET.encode('utf-8').ljust(32)[:32]
     cipher = AES.new(key, AES.MODE_CBC)
@@ -237,7 +258,7 @@ def save_with_encryption(data: list):
     final_blob = base64.b64encode(iv + ciphertext).decode('utf-8')
     with open("Sportzx.json", "w", encoding="utf-8") as f:
         json.dump({"data": final_blob}, f, indent=4)
-    print("✅ সফলভাবে Sportzx.json তৈরি হয়েছে!")
+    print("✅ Sportzx.json তৈরি হয়েছে!")
 
 
 if __name__ == "__main__":
