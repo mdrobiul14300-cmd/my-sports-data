@@ -114,15 +114,36 @@ class SportzxScraper:
         except:
             return []
 
+    def _decode_api_key(self, api_val: str) -> str:
+        """
+        API key যদি Base64 encoded হয় তাহলে decode করে আসল key বের করে।
+        যেমন: IPL, PSL এর API key গুলো অনেক সময় Base64 এ আসে।
+        """
+        if not api_val or len(api_val) < 20:
+            return api_val
+        try:
+            decoded = base64.b64decode(api_val).decode('utf-8')
+            # Valid API key হলে format হবে: "hex:hex"
+            if ":" in decoded and len(decoded) > 30:
+                return decoded
+        except Exception:
+            pass
+        return api_val
+
     def _clean_channel(self, ch: dict) -> dict:
-        """একটি channel এর title ঠিক করে এবং link replace করে"""
-        # Brand name ঠিক করা
+        """একটি channel এর title, api key ঠিক করে এবং link replace করে"""
+        # ১. Brand name ঠিক করা
         title = ch.get("title", "")
         title = re.sub(r'S.?portz[xX]', 'SportzUP', title)
         title = re.sub(r'S.?P[xX]', 'SUP', title)
         ch["title"] = title
 
-        # Link replace করা
+        # ২. API key Base64 decode করা (IPL/PSL fix)
+        api_val = ch.get("api", "")
+        if api_val:
+            ch["api"] = self._decode_api_key(api_val)
+
+        # ৩. Link replace করা
         if ch.get("link") == REPLACE_STREAM:
             ch["link"] = NEW_STREAM
 
