@@ -117,17 +117,32 @@ class SportzxScraper:
     def _decode_api_key(self, api_val: str) -> str:
         """
         API key যদি Base64 encoded হয় তাহলে decode করে আসল key বের করে।
-        যেমন: IPL, PSL এর API key গুলো অনেক সময় Base64 এ আসে।
+        তারপর corrupted character গুলো correction_map দিয়ে ঠিক করে।
         """
         if not api_val or len(api_val) < 20:
             return api_val
+
+        # ১. Base64 decode করা
         try:
             decoded = base64.b64decode(api_val).decode('utf-8')
-            # Valid API key হলে format হবে: "hex:hex"
             if ":" in decoded and len(decoded) > 30:
-                return decoded
+                api_val = decoded
         except Exception:
             pass
+
+        # ২. Corrupted character গুলো সঠিক hex character এ রূপান্তর করা
+        correction_map = {
+            'J': 'a',
+            '$': '5',
+            'l': '2',
+            'Q': 'b',
+            'W': 'f',
+            ')': '2',
+            'Z': 'a',
+        }
+        for wrong, right in correction_map.items():
+            api_val = api_val.replace(wrong, right)
+
         return api_val
 
     def _clean_channel(self, ch: dict) -> dict:
