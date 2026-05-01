@@ -113,13 +113,7 @@ class SportzxScraper:
         except:
             pass
         correction_map = {
-            'J': 'a',
-            '$': '5',
-            'l': '2',
-            'Q': 'b',
-            'W': 'f',
-            ')': '2',
-            'Z': 'a',
+            
         }
         for wrong, right in correction_map.items():
             api_val = api_val.replace(wrong, right)
