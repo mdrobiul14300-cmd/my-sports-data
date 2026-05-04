@@ -250,18 +250,22 @@ class SportzxScraper:
 
 
 def save_with_encryption(data: list):
-    if not data:
-        print("⚠️ কোন ডাটা নেই।")
-        return
+    if not data: return
+    # AES_SECRET কে ৩২ বাইট করতে হবে
     key = AES_SECRET.encode('utf-8').ljust(32)[:32]
+    # CBC মোড এবং একটি ফিক্সড বা র‍্যান্ডম IV ব্যবহার
     cipher = AES.new(key, AES.MODE_CBC)
-    iv = cipher.iv
+    iv = cipher.iv # এটি ১৬ বাইট
+    
     json_data = json.dumps(data).encode('utf-8')
+    # Padding যুক্ত করতে হবে
+    from Crypto.Util.Padding import pad
     ciphertext = cipher.encrypt(pad(json_data, AES.block_size))
+    
+    # IV + Ciphertext একসাথে বেইজ৬৪ করতে হবে
     final_blob = base64.b64encode(iv + ciphertext).decode('utf-8')
     with open("Sportzx.json", "w", encoding="utf-8") as f:
         json.dump({"data": final_blob}, f, indent=4)
-    print("✅ Sportzx.json তৈরি হয়েছে!")
 
 
 if __name__ == "__main__":
