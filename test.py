@@ -122,7 +122,7 @@ class SportzxScraper:
     'Z': 'a',
     'x': '6', 
     '[': 'd',
-    'U': 'c',
+    'U': '2',
 }
         for wrong, right in correction_map.items():
             api_val = api_val.replace(wrong, right)
