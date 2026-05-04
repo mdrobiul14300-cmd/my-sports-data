@@ -112,21 +112,24 @@ class SportzxScraper:
                 api_val = decoded
         except:
             pass
+
+        # \u0010-\u001f → শেষ hex digit রাখো
+        api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
+
         correction_map = {
-    'J': 'a', 
-    '$': '5', 
-    'l': '2', 
-    'Q': 'b', 
-    'W': 'f',
-    'w': '4',
-    ')': '2', 
-    'Z': 'a',
-    'x': '6', 
-    '[': 'd',
-    'U': 'c',
-    'u': '2',
-    '\u0010': '0',
-}
+            'J': 'a',
+            '$': '5',
+            'l': '2',
+            'Q': 'b',
+            'W': 'f',
+            'w': '4',
+            ')': '2',
+            'Z': 'a',
+            'x': '6',
+            '[': 'd',
+            'U': 'c',
+            'u': '2',
+        }
         for wrong, right in correction_map.items():
             api_val = api_val.replace(wrong, right)
         return api_val
@@ -165,7 +168,6 @@ class SportzxScraper:
 
         now_utc = datetime.utcnow()
 
-        # মেয়াদ শেষ হয়নি এমন manual events রাখা
         valid_manual_events = []
         for m_ev in manual.get("manual_events", []):
             end_time_str = m_ev.get("eventInfo", {}).get("endTime", "")
@@ -178,10 +180,8 @@ class SportzxScraper:
             except:
                 valid_manual_events.append(m_ev)
 
-        # Live event id list
         live_ids = {str(ev.get("id")) for ev in events}
 
-        # Manual events দিয়ে replace বা append
         for m_ev in valid_manual_events:
             m_id = str(m_ev.get("id"))
             if m_id in live_ids:
@@ -194,14 +194,12 @@ class SportzxScraper:
                 events.append(m_ev)
                 print(f"➕ নতুন event যোগ: {m_id}")
 
-        # Delete list অনুযায়ী বাদ দেওয়া
         delete_ids = {str(d) for d in manual.get("delete", [])}
         if delete_ids:
             before = len(events)
             events = [ev for ev in events if str(ev.get("id")) not in delete_ids]
             print(f"🗑️ {before - len(events)} টি event delete হলো।")
 
-        # manual_data.json আপডেট করা
         manual["manual_events"] = valid_manual_events
         manual["id_mapping"] = {
             k: v for k, v in manual.get("id_mapping", {}).items()
@@ -219,7 +217,6 @@ class SportzxScraper:
         print(f"🔗 API URL: {api_url}")
         base_api = api_url.rstrip('/')
 
-        # Events list fetch
         events = self._fetch_and_parse(f"{base_api}/events.json")
         if not isinstance(events, list) or not events:
             print("❌ Events data পাওয়া যায়নি!")
@@ -227,11 +224,9 @@ class SportzxScraper:
 
         print(f"📋 মোট {len(events)} টি event পাওয়া গেছে।")
 
-        # Manual data লোড
         manual = self._load_manual_data()
         id_mapping = manual.get("id_mapping", {})
 
-        # প্রতিটি event এর channel fetch
         for event in events:
             if "formats" in event:
                 del event["formats"]
@@ -246,7 +241,6 @@ class SportzxScraper:
             if fetch_id != eid:
                 print(f"🗺️ Event {eid} → {fetch_id} ({len(channels)} channels)")
 
-        # Manual data apply
         events = self._apply_manual_data(events, manual)
         print(f"✅ মোট {len(events)} টি event প্রস্তুত।")
         return events
