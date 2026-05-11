@@ -104,35 +104,35 @@ class SportzxScraper:
             return []
 
     def _decode_api_key(self, api_val: str) -> str:
-    if not api_val or len(api_val) < 20:
+        if not api_val or len(api_val) < 20:
+            return api_val
+        try:
+            decoded = base64.b64decode(api_val).decode('utf-8')
+            if ":" in decoded and len(decoded) > 30:
+                api_val = decoded
+        except:
+            pass
+
+        # আগে control char fix করো
+        api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
+
+        correction_map = {
+            'J': 'a', '$': '5', 'l': '2', 'Q': 'b',
+            'W': 'e', 'w': '4', ')': '2', 'Z': 'a',
+            'x': '5', '[': 'd', 'U': 'c', 'u': '2',
+            'S': 'a', 'A': 'a',
+        }
+        for wrong, right in correction_map.items():
+            api_val = api_val.replace(wrong, right)
+
+        # `:` এর পরে শুরু থেকে position 24 এ '0' থাকলে '8' করো
+        if ":" in api_val:
+            prefix, suffix = api_val.split(":", 1)
+            if len(suffix) > 24 and suffix[24] == '0':
+                suffix = suffix[:24] + '8' + suffix[25:]
+            api_val = prefix + ":" + suffix
+
         return api_val
-    try:
-        decoded = base64.b64decode(api_val).decode('utf-8')
-        if ":" in decoded and len(decoded) > 30:
-            api_val = decoded
-    except:
-        pass
-
-    # আগে control char fix করো
-    api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
-
-    correction_map = {
-        'J': 'a', '$': '5', 'l': '2', 'Q': 'b',
-        'W': 'e', 'w': '4', ')': '2', 'Z': 'a',
-        'x': '5', '[': 'd', 'U': 'c', 'u': '2',
-        'S': 'a', 'A': 'a',
-    }
-    for wrong, right in correction_map.items():
-        api_val = api_val.replace(wrong, right)
-
-    # `:` এর পরে শুরু থেকে position 24 এ '0' থাকলে '8' করো
-    if ":" in api_val:
-        prefix, suffix = api_val.split(":", 1)
-        if len(suffix) > 24 and suffix[24] == '0':
-            suffix = suffix[:24] + '8' + suffix[25:]
-        api_val = prefix + ":" + suffix
-
-    return api_val
 
     def _clean_channel(self, ch: dict) -> dict:
         title = ch.get("title", "")
