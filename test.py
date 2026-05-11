@@ -129,7 +129,7 @@ class SportzxScraper:
             '[': 'd',
             'U': 'c',
             'u': '2',
-            'S': 'f',
+            'S': 'a',
             'A': 'a',
         }
         for wrong, right in correction_map.items():
