@@ -104,37 +104,37 @@ class SportzxScraper:
             return []
 
     def _decode_api_key(self, api_val: str) -> str:
-        if not api_val or len(api_val) < 20:
-            return api_val
-        try:
-            decoded = base64.b64decode(api_val).decode('utf-8')
-            if ":" in decoded and len(decoded) > 30:
-                api_val = decoded
-        except:
-            pass
-
-        # \u0010-\u001f → শেষ hex digit রাখো
-        api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
-
-        correction_map = {
-            'J': 'a',
-            '$': '5',
-            'l': '2',
-            'Q': 'b',
-            'W': 'e',
-            'w': '4',
-            ')': '2',
-            'Z': 'a',
-            'x': '5',
-            '[': 'd',
-            'U': 'c',
-            'u': '2',
-            'S': 'a',
-            'A': 'a',
-        }
-        for wrong, right in correction_map.items():
-            api_val = api_val.replace(wrong, right)
+    if not api_val or len(api_val) < 20:
         return api_val
+    try:
+        decoded = base64.b64decode(api_val).decode('utf-8')
+        if ":" in decoded and len(decoded) > 30:
+            api_val = decoded
+    except:
+        pass
+
+    # control chars fix
+    api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
+
+    correction_map = {
+        'J': 'a', '$': '5', 'l': '2', 'Q': 'b',
+        'W': 'e', 'w': '4', ')': '2', 'Z': 'a',
+        'x': '5', '[': 'd', 'U': 'c', 'u': '2',
+        'S': 'a', 'A': 'a',
+    }
+    for wrong, right in correction_map.items():
+        api_val = api_val.replace(wrong, right)
+
+    if ":" in api_val:
+        parts = api_val.split(":", 1)
+        second = parts[1]
+        fix_index = len(second) - 7
+        if 0 <= fix_index < len(second) and second[fix_index] == '0':
+            second = second[:fix_index] + '8' + second[fix_index+1:]
+            parts[1] = second
+            api_val = ":".join(parts)
+
+    return api_val
 
     def _clean_channel(self, ch: dict) -> dict:
         title = ch.get("title", "")
