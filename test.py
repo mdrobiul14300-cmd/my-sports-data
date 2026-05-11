@@ -113,7 +113,7 @@ class SportzxScraper:
     except:
         pass
 
-    # control chars fix
+    # আগে control char fix করো
     api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
 
     correction_map = {
@@ -125,14 +125,12 @@ class SportzxScraper:
     for wrong, right in correction_map.items():
         api_val = api_val.replace(wrong, right)
 
+    # `:` এর পরে শুরু থেকে position 24 এ '0' থাকলে '8' করো
     if ":" in api_val:
-        parts = api_val.split(":", 1)
-        second = parts[1]
-        fix_index = len(second) - 7
-        if 0 <= fix_index < len(second) and second[fix_index] == '0':
-            second = second[:fix_index] + '8' + second[fix_index+1:]
-            parts[1] = second
-            api_val = ":".join(parts)
+        prefix, suffix = api_val.split(":", 1)
+        if len(suffix) > 24 and suffix[24] == '0':
+            suffix = suffix[:24] + '8' + suffix[25:]
+        api_val = prefix + ":" + suffix
 
     return api_val
 
