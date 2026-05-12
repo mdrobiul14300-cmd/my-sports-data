@@ -129,7 +129,7 @@ class SportzxScraper:
         if ":" in api_val:
             prefix, suffix = api_val.split(":", 1)
             if len(suffix) > 24 and suffix[24] == '0':
-                suffix = suffix[:24] + '8' + suffix[25:]
+                suffix = suffix[:24] + '0' + suffix[25:]
             api_val = prefix + ":" + suffix
 
         return api_val
