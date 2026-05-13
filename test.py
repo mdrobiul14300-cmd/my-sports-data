@@ -258,7 +258,7 @@ def save_with_encryption(data: list):
     final_blob = base64.b64encode(iv + ciphertext).decode('utf-8')
     with open("Sportzx.json", "w", encoding="utf-8") as f:
         json.dump({"data": final_blob}, f, indent=4)
-    print("✅ Sportzx.json তৈরি হয়েছে!")
+    print("✅ Robiul.json তৈরি হয়েছে!")
 
 
 if __name__ == "__main__":
