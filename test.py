@@ -3,6 +3,8 @@ import json
 import re
 import base64
 import os
+import gzip
+import io
 from datetime import datetime
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
@@ -24,7 +26,8 @@ class SportzxScraper:
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Dalvik/2.1.0 (Linux; Android 13)",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
+            "accept": "*/*",
             "Accept-Encoding": "gzip"
         })
 
@@ -54,14 +57,40 @@ class SportzxScraper:
 
     def _decrypt_source_data(self, b64_data: str):
         try:
+            # URL-Safe বেস৬৪ এবং প্যাডিং ফিক্স
+            b64_data = b64_data.replace('-', '+').replace('_', '/')
+            rem = len(b64_data) % 4
+            if rem > 0:
+                b64_data += '=' * (4 - rem)
+                
             ct = base64.b64decode(b64_data)
+            
+            # AES ১৬ বাইট বাউন্ডারি চেক
+            remainder = len(ct) % 16
+            if remainder != 0:
+                ct += b'\x00' * (16 - remainder)
+                
             key, iv = self._generate_aes_key_iv(APP_PASSWORD)
             cipher = AES.new(key, AES.MODE_CBC, iv)
             pt = cipher.decrypt(ct)
-            pad_val = pt[-1]
-            if 1 <= pad_val <= 16:
-                pt = pt[:-pad_val]
-            return pt.decode("utf-8", errors="replace")
+            
+            # জাভার PKCS7/নাল প্যাডিং ট্রিম
+            if len(pt) > 0:
+                pad_val = pt[-1]
+                if 1 <= pad_val <= 16:
+                    if pt[-pad_val:] == bytes([pad_val]) * pad_val:
+                        pt = pt[:-pad_val]
+                else:
+                    pt = pt.rstrip(b'\x00')
+            
+            # 🎯 জাদুকরী ট্রিক: জিজিপ ডেটা আনপ্যাক করা
+            try:
+                with gzip.GzipFile(fileobj=io.BytesIO(pt)) as f:
+                    decrypted_text = f.read().decode("utf-8")
+                return decrypted_text
+            except Exception:
+                # জিজিপ না হয়ে সরাসরি টেক্সট হলে
+                return pt.decode("utf-8", errors="replace")
         except:
             return ""
 
@@ -98,7 +127,21 @@ class SportzxScraper:
     def _fetch_and_parse(self, url: str):
         try:
             r = self.session.get(url, timeout=self.timeout)
-            decrypted = self._decrypt_source_data(r.json().get("data", ""))
+            if r.status_code != 200:
+                return []
+                
+            b64_data = r.json().get("data", "")
+            if not b64_data:
+                return []
+                
+            decrypted = self._decrypt_source_data(b64_data)
+            
+            # এক্সট্রা ক্যারেক্টার বা জেসন বডি ক্লিন করা ({ এবং } ফিল্টার)
+            start_idx = decrypted.find('{')
+            end_idx = decrypted.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                decrypted = decrypted[start_idx:end_idx+1]
+                
             return json.loads(decrypted) if decrypted else []
         except:
             return []
