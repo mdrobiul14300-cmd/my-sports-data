@@ -7,26 +7,23 @@ from datetime import datetime
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
-APP_PASSWORD    = os.getenv("APP_PASSWORD")
+APP_PASSWORD     = os.getenv("APP_PASSWORD")
 FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
-FIREBASE_FID    = os.getenv("FIREBASE_FID")
-FIREBASE_APP_ID = os.getenv("FIREBASE_APP_ID")
-PROJECT_NUMBER  = os.getenv("PROJECT_NUMBER")
-PACKAGE_NAME    = os.getenv("PACKAGE_NAME")
-AES_SECRET      = os.getenv("AES_SECRET")
+FIREBASE_FID     = os.getenv("FIREBASE_FID")
+FIREBASE_APP_ID  = os.getenv("FIREBASE_APP_ID")
+PROJECT_NUMBER   = os.getenv("PROJECT_NUMBER")
+PACKAGE_NAME     = os.getenv("PACKAGE_NAME")
+AES_SECRET       = os.getenv("AES_SECRET")
 
-# PHP endpoint যেখানে data পাঠাবো
-PHP_RECEIVER_URL = os.getenv("PHP_RECEIVER_URL", "https://yourdomain.com/receiver_merged.php?source=sportzx")
+PHP_RECEIVER_URL = os.getenv("PHP_RECEIVER_URL", "https://yourdomain.com/receiver_merged.php?source=push")
 SHARED_SECRET    = os.getenv("SHARED_SECRET", "change_this_secret")
-
-# Local cache file (fallback হিসেবে)
 LOCAL_CACHE_FILE = "local_cache.json"
 
 REPLACE_STREAM = "https://video.twimg.com/amplify_video/1919602814160125952/pl/t5p2RHLI21i-hXga.m3u8?variant_version=1&tag=14"
 NEW_STREAM     = "https://raw.githubusercontent.com/TOUFIK2256/Feildfever/main/VN20251203_010347.mp4"
 
 
-class SportzxScraper:
+class DataScraper:
     def __init__(self, timeout: int = 20):
         self.timeout = timeout
         self.session = requests.Session()
@@ -176,7 +173,7 @@ class SportzxScraper:
                 if now_utc < end_dt:
                     valid_manual_events.append(m_ev)
                 else:
-                    print(f"⏰ Expired event বাদ: {m_ev.get('id')}")
+                    print(f"Expired event skip: {m_ev.get('id')}")
             except:
                 valid_manual_events.append(m_ev)
 
@@ -187,17 +184,17 @@ class SportzxScraper:
                 for i, ev in enumerate(events):
                     if str(ev.get("id")) == m_id:
                         events[i] = m_ev
-                        print(f"🔄 Replace: {m_id}")
+                        print(f"Replace: {m_id}")
                         break
             else:
                 events.append(m_ev)
-                print(f"➕ নতুন event যোগ: {m_id}")
+                print(f"New event added: {m_id}")
 
         delete_ids = {str(d) for d in manual.get("delete", [])}
         if delete_ids:
             before = len(events)
             events = [ev for ev in events if str(ev.get("id")) not in delete_ids]
-            print(f"🗑️ {before - len(events)} টি event delete হলো।")
+            print(f"{before - len(events)} event(s) deleted.")
 
         manual["manual_events"] = valid_manual_events
         manual["id_mapping"] = {
@@ -207,23 +204,23 @@ class SportzxScraper:
         self._save_manual_data(manual)
         return events
 
-    def scrape_all_data(self) -> list:
+    def fetch_all(self) -> list:
         api_url = self._get_api_url_from_firebase()
         if not api_url:
-            print("❌ API URL পাওয়া যায়নি!")
+            print("API URL not found!")
             return []
 
-        print(f"🔗 API URL: {api_url}")
+        print(f"API URL: {api_url}")
         base_api = api_url.rstrip('/')
 
         events = self._fetch_and_parse(f"{base_api}/events.json")
         if not isinstance(events, list) or not events:
-            print("❌ Events data পাওয়া যায়নি!")
+            print("Events data not found!")
             return []
 
-        print(f"📋 মোট {len(events)} টি event পাওয়া গেছে।")
+        print(f"Total {len(events)} events fetched.")
 
-        manual = self._load_manual_data()
+        manual    = self._load_manual_data()
         id_mapping = manual.get("id_mapping", {})
 
         for event in events:
@@ -238,91 +235,70 @@ class SportzxScraper:
                 channels = []
             event["channels_data"] = [self._clean_channel(ch) for ch in channels]
             if fetch_id != eid:
-                print(f"🗺️ Event {eid} → {fetch_id} ({len(channels)} channels)")
+                print(f"Mapped {eid} -> {fetch_id} ({len(channels)} channels)")
 
         events = self._apply_manual_data(events, manual)
-        print(f"✅ মোট {len(events)} টি event প্রস্তুত।")
+        print(f"Ready: {len(events)} events.")
         return events
 
 
-# ─── AES encrypt helper (PHP এর মতো same format) ────────────────────────────
 def _aes_encrypt(data: list, key_str: str) -> str:
-    key = key_str.encode('utf-8').ljust(32)[:32]
+    key    = key_str.encode('utf-8').ljust(32)[:32]
     cipher = AES.new(key, AES.MODE_CBC)
-    iv = cipher.iv
-    json_bytes = json.dumps(data).encode('utf-8')
-    ciphertext = cipher.encrypt(pad(json_bytes, AES.block_size))
-    return base64.b64encode(iv + ciphertext).decode('utf-8')
+    iv     = cipher.iv
+    ct     = cipher.encrypt(pad(json.dumps(data).encode('utf-8'), AES.block_size))
+    return base64.b64encode(iv + ct).decode('utf-8')
 
 
-# ─── Local cache save (backup) ───────────────────────────────────────────────
 def save_local_cache(data: list):
     try:
-        payload = {
-            "generated_ts": int(datetime.utcnow().timestamp()),
-            "count": len(data),
-            "data": data
-        }
         with open(LOCAL_CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False)
-        print(f"💾 Local cache saved: {LOCAL_CACHE_FILE}")
+            json.dump({
+                "generated_ts": int(datetime.utcnow().timestamp()),
+                "count": len(data),
+                "events": data
+            }, f, ensure_ascii=False)
+        print(f"Local cache saved ({len(data)} events).")
     except Exception as e:
-        print(f"⚠️ Local cache save failed: {e}")
+        print(f"Local cache save failed: {e}")
 
 
-# ─── PHP এ POST করো ──────────────────────────────────────────────────────────
 def push_to_php(data: list) -> bool:
     if not data:
-        print("⚠️ কোন data নেই, push skip।")
+        print("No data to push.")
         return False
-
-    encrypted_blob = _aes_encrypt(data, AES_SECRET)
-
-    payload = json.dumps({
-        "data": encrypted_blob,
-        "ts": int(datetime.utcnow().timestamp()),
-        "count": len(data)
-    })
-
     try:
         resp = requests.post(
             PHP_RECEIVER_URL,
-            data=payload,
+            data=json.dumps({
+                "data": _aes_encrypt(data, AES_SECRET),
+                "ts":    int(datetime.utcnow().timestamp()),
+                "count": len(data)
+            }),
             headers={
-                "Content-Type": "application/json",
-                "X-Sportzx-Secret": SHARED_SECRET
+                "Content-Type":    "application/json",
+                "X-Push-Secret":   SHARED_SECRET
             },
             timeout=30
         )
         if resp.status_code == 200:
-            result = resp.json()
-            print(f"✅ PHP push সফল! Response: {json.dumps(result, ensure_ascii=False)[:200]}")
+            print(f"Push OK. Response: {resp.text[:200]}")
             return True
         else:
-            print(f"❌ PHP push failed. Status: {resp.status_code}, Body: {resp.text[:200]}")
+            print(f"Push failed. HTTP {resp.status_code}: {resp.text[:200]}")
             return False
-    except requests.exceptions.ConnectionError:
-        print(f"❌ PHP server connect করা যায়নি: {PHP_RECEIVER_URL}")
-        return False
-    except requests.exceptions.Timeout:
-        print("❌ PHP push timeout (30s)।")
-        return False
     except Exception as e:
-        print(f"❌ PHP push error: {e}")
+        print(f"Push error: {e}")
         return False
 
 
 if __name__ == "__main__":
-    scraper = SportzxScraper()
-    final_data = scraper.scrape_all_data()
+    scraper    = DataScraper()
+    final_data = scraper.fetch_all()
 
     if final_data:
-        # ১. সবসময় local cache save করো (fallback)
         save_local_cache(final_data)
-
-        # ২. PHP তে push করো
-        success = push_to_php(final_data)
-        if not success:
-            print("⚠️ PHP push হয়নি, কিন্তু local cache আছে।")
+        if not push_to_php(final_data):
+            print("Push failed — local cache preserved as fallback.")
     else:
-        print("❌ কোন data নেই।")
+        print("No data fetched.")
