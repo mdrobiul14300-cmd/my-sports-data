@@ -15,8 +15,8 @@ PROJECT_NUMBER   = os.getenv("PROJECT_NUMBER")
 PACKAGE_NAME     = os.getenv("PACKAGE_NAME")
 AES_SECRET       = os.getenv("AES_SECRET")
 
-PHP_RECEIVER_URL = os.getenv("PHP_RECEIVER_URL", "https://yourdomain.com/receiver_merged.php?source=push")
-SHARED_SECRET    = os.getenv("SHARED_SECRET", "change_this_secret")
+PHP_RECEIVER_URL = os.getenv("PHP_RECEIVER_URL", "")
+SHARED_SECRET    = os.getenv("SHARED_SECRET", "")
 LOCAL_CACHE_FILE = "local_cache.json"
 
 REPLACE_STREAM = "https://video.twimg.com/amplify_video/1919602814160125952/pl/t5p2RHLI21i-hXga.m3u8?variant_version=1&tag=14"
