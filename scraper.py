@@ -119,10 +119,16 @@ class DataScraper:
         api_val = re.sub(r'[\u0010-\u001f]', lambda m: hex(ord(m.group()))[-1], api_val)
         correction_map = {
             'J': 'a', '$': '5', 'l': '2', 'Q': 'b',
+
             'W': 'e', 'w': '4', ')': '2', 'Z': 'a',
+
             'x': '5', '[': 'd', 'U': 'c', 'u': '2',
+
             'S': 'a', 'A': 'a', 'D': 'd', 's': '0',
-            'X': 'f', 'y': '6',
+
+            'X': 'f', 'y': '6', 'V': 'd', 'v': '3',
+
+            't': '1', 
         }
         for wrong, right in correction_map.items():
             api_val = api_val.replace(wrong, right)
