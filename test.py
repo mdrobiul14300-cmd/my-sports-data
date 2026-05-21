@@ -164,7 +164,7 @@ class SportzxScraper:
 
                 json={
 
-                    "appVersion": "2.1",
+                    "appVersion": "2.5",
 
                     "appInstanceId": FIREBASE_FID,
 
