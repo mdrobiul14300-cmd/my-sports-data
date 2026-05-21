@@ -32,7 +32,7 @@ jobs:
           PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
           PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
           AES_SECRET: ${{ secrets.AES_SECRET }}
-        run: python scraper.py
+        run: python test.py
 
       - name: Save Data
         run: |
