@@ -244,7 +244,7 @@ class SportzxScraper:
 
             'S': 'a', 'A': 'a', 'D': 'd', 's': '0',
 
-            'X': 'f', 'y': '6', 'V': 'd', 'v': '3',
+            'X': 'a', 'y': '6', 'V': 'd', 'v': '3',
 
             't': '1', 
 
@@ -262,7 +262,7 @@ class SportzxScraper:
 
             prefix, suffix = api_val.split(":", 1)
 
-            if len(suffix) > 24 and suffix[24] == '0':
+            if len(suffix) > 24 and suffix[24] == '9':
 
                 suffix = suffix[:24] + '0' + suffix[25:]
 
