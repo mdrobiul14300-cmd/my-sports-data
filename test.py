@@ -260,7 +260,6 @@ class SportzxScraper:
 
 
 
-        # `:` এর পরে শুরু থেকে position 24 এ '0' থাকলে '8' করো
 
         if ":" in api_val:
 
@@ -268,7 +267,7 @@ class SportzxScraper:
 
             if len(suffix) > 24 and suffix[24] == '0':
 
-                suffix = suffix[:24] + '0' + suffix[25:]
+                suffix = suffix[:24] + '8' + suffix[25:]
 
             api_val = prefix + ":" + suffix
 
