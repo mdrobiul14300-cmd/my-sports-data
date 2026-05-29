@@ -107,36 +107,35 @@ class SportzxScraper:
 
 
     def _decrypt_source_data(self, b64_data: str):
-        try:
-            # URL-safe base64 fix
-            b64_data = b64_data.replace('-', '+').replace('_', '/')
-            
-        # padding fix
-        
+    try:
+        # URL-safe base64 fix
+        b64_data = b64_data.replace('-', '+').replace('_', '/')
+
+        # Base64 padding fix
         missing_padding = len(b64_data) % 4
         if missing_padding:
             b64_data += '=' * (4 - missing_padding)
-            
-            ct = base64.b64decode(b64_data)
-            
-            key, iv = self._generate_aes_key_iv(APP_PASSWORD)
-            
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            
-            pt = cipher.decrypt(ct)
-            
-            pad_val = pt[-1]
-            
-            if 1 <= pad_val <= 16:
-                pt = pt[:-pad_val]
-                
-                return pt.decode("utf-8", errors="replace")
 
-except Exception as e:
+        # Decode base64
+        ct = base64.b64decode(b64_data)
 
-print("Decrypt Error:", e)
+        # Generate AES key + IV
+        key, iv = self._generate_aes_key_iv(APP_PASSWORD)
 
-return ""
+        # AES decrypt
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        pt = cipher.decrypt(ct)
+
+        # Remove PKCS padding
+        pad_val = pt[-1]
+        if 1 <= pad_val <= 16:
+            pt = pt[:-pad_val]
+
+        return pt.decode("utf-8", errors="replace")
+
+    except Exception as e:
+        print("Decrypt Error:", e)
+        return ""
 
 
     def _get_api_url_from_firebase(self):
