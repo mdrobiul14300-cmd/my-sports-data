@@ -43,10 +43,3 @@ jobs:
           git add Robiul.json
           git commit -m "Auto Update: $(date)" || exit 0
           git push
-
-      - name: Notify receiver.php (DB Save)
-        if: success()
-        run: |
-          curl -s -X POST "https://sportspulse.xyz/data_sourche/sportzx_r.php" \
-            -d "secret=sportz_receiver_2025" \
-            --max-time 30
