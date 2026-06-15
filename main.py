@@ -220,7 +220,7 @@ def main():
         }
         
         try:
-            response = requests.post(PHP_TARGET_URL, data=json.dumps(final_data, ensure_ascii=False), headers=headers, timeout=30)
+            response = requests.post(PHP_TARGET_URL, data=json.dumps(final_data, ensure_ascii=False), headers=headers, timeout=60)
             print(f"🔹 Server Response Code: {response.status_code}")
             print(f"🔹 Server Message: {response.text}")
         except Exception as e:
