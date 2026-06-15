@@ -1,0 +1,36 @@
+name: Run Python Data Engine
+
+on:
+  workflow_dispatch: # গিটহাব থেকে ম্যানুয়ালি রান করার জন্য
+  repository_dispatch:
+    types: [hosting_trigger] # হোস্টিং থেকে এই টাইপ পাঠিয়ে ট্রিগার করা হবে
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 📦 Install Requirements
+      run: |
+        pip install requests pycryptodome
+
+    - name: 🚀 Execute Engine
+      env:
+        PHP_TARGET_URL: ${{ secrets.PHP_TARGET_URL }}
+        PHP_SECRET_KEY: ${{ secrets.PHP_SECRET_KEY }}
+        DEFAULT_IVANZ_BASE: ${{ secrets.DEFAULT_IVANZ_BASE }}
+        FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        EVENTS_PATH: ${{ secrets.EVENTS_PATH }}
+        IVANZ_ALPHA: ${{ secrets.IVANZ_ALPHA }}
+        IVANZ_MAPPED: ${{ secrets.IVANZ_MAPPED }}
+        KEYS: ${{ secrets.KEYS }}
+      run: python main.py
