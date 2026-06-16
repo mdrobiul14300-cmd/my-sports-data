@@ -9,17 +9,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-# --- 🔐 GitHub Secrets থেকে সমস্ত সেনসিটিভ কনফিগারেশন নেওয়া হচ্ছে ---
+# --- 🔐 GitHub Secrets থেকে সমস্ত সেনসিティブ কনফিগারেশন নেওয়া হচ্ছে ---
 DEFAULT_IVANZ_BASE = os.environ.get("DEFAULT_IVANZ_BASE")
-PHP_TARGET_URL = os.environ.get("PHP_TARGET_URL")
-SECRET_KEY = os.environ.get("PHP_SECRET_KEY")
 
-# Firebase ক্রেডেনশিয়ালস
+# 🌐 হোস্টিং সার্ভার ১ এর কনফিগারেশন (আপনার পুরোনো সার্ভার)
+PHP_TARGET_URL_1 = os.environ.get("PHP_TARGET_URL")
+SECRET_KEY_1 = os.environ.get("PHP_SECRET_KEY")
+
+# 🌐 হোস্টিং সার্ভার ২ এর কনফিগারেশন (আপনার নতুন হোস্টসেবা / sportzpulse.xyz সার্ভার)
+# গিটহাব অ্যাকশনে এই নতুন দুটি সিক্রেট নেম অ্যাড করে দিবেন
+PHP_TARGET_URL_2 = os.environ.get("PHP_TARGET_URL_2")
+SECRET_KEY_2 = os.environ.get("PHP_SECRET_KEY_2")
+
+# Firebase ক্রেডেনশিয়ালস
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY")
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 FIREBASE_APP_ID = os.environ.get("FIREBASE_APP_ID")
 
-# নতুন যোগ করা সিক্রেটস (স্ট্রিং থেকে পাইথন অবজেক্টে কনভার্ট করা হচ্ছে)
+# নতুন যোগ করা সিক্রেটস
 EVENTS_PATH = os.environ.get("EVENTS_PATH", "events.txt")
 
 try:
@@ -195,8 +202,8 @@ def main():
         print("❌ Error: Core decryption parameters (KEYS/ALPHA/MAPPED) are missing or corrupted!")
         return
         
-    if not all([SECRET_KEY, PHP_TARGET_URL, DEFAULT_IVANZ_BASE]):
-        print("❌ Error: Essential hosting environment variables are missing!")
+    if not all([PHP_TARGET_URL_1, SECRET_KEY_1, DEFAULT_IVANZ_BASE]):
+        print("❌ Error: Essential hosting environment variables for Server 1 are missing!")
         return
         
     IVANZ_BASE = get_dynamic_url_from_firebase()
@@ -212,19 +219,33 @@ def main():
             print("❌ Decryption failed.")
             return
 
-        print("📡 Sending data to Hosting Server via PHP...")
+        # 🔄 সার্ভার লিস্ট তৈরি (লুপের মাধ্যমে ডেটা পুশ করার জন্য)
+        hosting_targets = []
         
-        headers = {
-            "Content-Type": "application/json",
-            "X-Auth-Token": SECRET_KEY
-        }
+        # প্রথম সার্ভার অ্যাড করা হচ্ছে
+        hosting_targets.append(("সার্ভার ১ (Old)", PHP_TARGET_URL_1, SECRET_KEY_1))
         
-        try:
-            response = requests.post(PHP_TARGET_URL, data=json.dumps(final_data, ensure_ascii=False), headers=headers, timeout=60)
-            print(f"🔹 Server Response Code: {response.status_code}")
-            print(f"🔹 Server Message: {response.text}")
-        except Exception as e:
-            print(f"❌ Failed to transmit data to hosting: {e}")
+        # দ্বিতীয় সার্ভার কন্ডিশনালি অ্যাড করা হচ্ছে (যদি সেটিংস থাকে)
+        if PHP_TARGET_URL_2 and SECRET_KEY_2:
+            hosting_targets.append(("সার্ভার ২ (New)", PHP_TARGET_URL_2, SECRET_KEY_2))
+        else:
+            print("⚠️ Warning: Server 2 config variables (PHP_TARGET_URL_2 / SECRET_KEY_2) are missing. Skipping Server 2.")
+
+        # 📡 লুপ চালিয়ে সব হোস্টিং সার্ভারে ডেটা পাঠানো হচ্ছে
+        json_payload = json.dumps(final_data, ensure_ascii=False)
+        
+        for server_name, target_url, secret_key in hosting_targets:
+            print(f"📡 Sending data to {server_name} via PHP...")
+            headers = {
+                "Content-Type": "application/json",
+                "X-Auth-Token": secret_key
+            }
+            try:
+                response = requests.post(target_url, data=json_payload, headers=headers, timeout=60)
+                print(f"🔹 {server_name} Response Code: {response.status_code}")
+                print(f"🔹 {server_name} Message: {response.text}")
+            except Exception as e:
+                print(f"❌ Failed to transmit data to {server_name}: {e}")
     else:
         print("❌ Could not fetch root data from source server.")
 
