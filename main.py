@@ -5,15 +5,15 @@ import re
 import requests
 import urllib.request
 import ssl
-import urllib3  # SSL ওয়ার্নিং ডিসেবল করার জন্য
+import urllib3  # SSL ওয়ার্নিং ডিসেবল করার জন্য
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-# ❌ পাইথনের ইনসিকিউর রিকোয়েস্ট ওয়ার্নিংগুলো বন্ধ করা হচ্ছে
+# ❌ পাইথনের ইনসিকিউর রিকোয়েস্ট ওয়ার্নিংগুলো বন্ধ করা হচ্ছে
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# --- 🔐 GitHub Secrets থেকে সমস্ত সেনসিティブ কনফিগারেশন নেওয়া হচ্ছে ---
+# --- 🔐 GitHub Secrets থেকে সমস্ত সেনসিティブ充Config নেওয়া হচ্ছে ---
 DEFAULT_IVANZ_BASE = os.environ.get("DEFAULT_IVANZ_BASE")
 
 # 🌐 হোস্টিং সার্ভার ১ এর কনফিগারেশন (আপনার পুরোনো সার্ভার)
@@ -22,7 +22,8 @@ SECRET_KEY_1 = os.environ.get("PHP_SECRET_KEY")
 
 # 🌐 হোস্টিং সার্ভার ২ এর কনফিগারেশন (নতুন হোস্টসেবা / sportzpulse.xyz সার্ভার)
 PHP_TARGET_URL_2 = os.environ.get("PHP_TARGET_URL_2")
-SECRET_KEY_2 = os.environ.get("PHP_SECRET_KEY_2")
+# 🟢 সার্ভার ২ এর জন্যও পুরোনো সাকসেসফুল সিক্রেট কী-টি সরাসরি অ্যাসাইন করা হলো
+SECRET_KEY_2 = os.environ.get("PHP_SECRET_KEY")
 
 # Firebase ক্রেডেনশিয়ালস
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY")
@@ -241,10 +242,11 @@ def main():
             print(f"📡 Sending data to {server_name} via PHP...")
             headers = {
                 "Content-Type": "application/json",
-                "X-Auth-Token": secret_key
+                "X-Auth-Token": secret_key,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GitHubActions/1.0"  # 🟢 ক্লাউডফ্লেয়ার বাইপাস করার কাস্টম এজেন্ট
             }
             try:
-                # 🟢 verify=False যোগ করা হয়েছে SSL/TLS এরর বাইপাস করার জন্য
+                # 🟢 verify=False যোগ করা হয়েছে SSL/TLS এরর বাইপাস করার জন্য
                 response = requests.post(target_url, data=json_payload, headers=headers, timeout=60, verify=False)
                 print(f"🔹 {server_name} Response Code: {response.status_code}")
                 print(f"🔹 {server_name} Message: {response.text}")
