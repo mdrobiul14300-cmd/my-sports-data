@@ -5,9 +5,13 @@ import re
 import requests
 import urllib.request
 import ssl
+import urllib3  # SSL ওয়ার্নিং ডিসেবল করার জন্য
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
+
+# ❌ পাইথনের ইনসিকিউর রিকোয়েস্ট ওয়ার্নিংগুলো বন্ধ করা হচ্ছে
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- 🔐 GitHub Secrets থেকে সমস্ত সেনসিティブ কনফিগারেশন নেওয়া হচ্ছে ---
 DEFAULT_IVANZ_BASE = os.environ.get("DEFAULT_IVANZ_BASE")
@@ -16,8 +20,7 @@ DEFAULT_IVANZ_BASE = os.environ.get("DEFAULT_IVANZ_BASE")
 PHP_TARGET_URL_1 = os.environ.get("PHP_TARGET_URL")
 SECRET_KEY_1 = os.environ.get("PHP_SECRET_KEY")
 
-# 🌐 হোস্টিং সার্ভার ২ এর কনফিগারেশন (আপনার নতুন হোস্টসেবা / sportzpulse.xyz সার্ভার)
-# গিটহাব অ্যাকশনে এই নতুন দুটি সিক্রেট নেম অ্যাড করে দিবেন
+# 🌐 হোস্টিং সার্ভার ২ এর কনফিগারেশন (নতুন হোস্টসেবা / sportzpulse.xyz সার্ভার)
 PHP_TARGET_URL_2 = os.environ.get("PHP_TARGET_URL_2")
 SECRET_KEY_2 = os.environ.get("PHP_SECRET_KEY_2")
 
@@ -80,7 +83,7 @@ def get_dynamic_url_from_firebase():
     }
 
     try:
-        response = requests.post(url, data=json.dumps(payload), headers=headers, timeout=15)
+        response = requests.post(url, data=json.dumps(payload), headers=headers, timeout=15, verify=False)
         if response.status_code == 200:
             config_data = response.json()
             entries = config_data.get("entries", {})
@@ -225,13 +228,13 @@ def main():
         # প্রথম সার্ভার অ্যাড করা হচ্ছে
         hosting_targets.append(("সার্ভার ১ (Old)", PHP_TARGET_URL_1, SECRET_KEY_1))
         
-        # দ্বিতীয় সার্ভার কন্ডিশনালি অ্যাড করা হচ্ছে (যদি সেটিংস থাকে)
+        # দ্বিতীয় সার্ভার কন্ডিশনালি অ্যাড করা হচ্ছে (যদি সেটিংস থাকে)
         if PHP_TARGET_URL_2 and SECRET_KEY_2:
             hosting_targets.append(("সার্ভার ২ (New)", PHP_TARGET_URL_2, SECRET_KEY_2))
         else:
             print("⚠️ Warning: Server 2 config variables (PHP_TARGET_URL_2 / SECRET_KEY_2) are missing. Skipping Server 2.")
 
-        # 📡 লুপ চালিয়ে সব হোস্টিং সার্ভারে ডেটা পাঠানো হচ্ছে
+        # 📡 লুপ চালিয়ে সব হোস্টিং সার্ভারে ডেটা পাঠানো হচ্ছে
         json_payload = json.dumps(final_data, ensure_ascii=False)
         
         for server_name, target_url, secret_key in hosting_targets:
@@ -241,7 +244,8 @@ def main():
                 "X-Auth-Token": secret_key
             }
             try:
-                response = requests.post(target_url, data=json_payload, headers=headers, timeout=60)
+                # 🟢 verify=False যোগ করা হয়েছে SSL/TLS এরর বাইপাস করার জন্য
+                response = requests.post(target_url, data=json_payload, headers=headers, timeout=60, verify=False)
                 print(f"🔹 {server_name} Response Code: {response.status_code}")
                 print(f"🔹 {server_name} Message: {response.text}")
             except Exception as e:
