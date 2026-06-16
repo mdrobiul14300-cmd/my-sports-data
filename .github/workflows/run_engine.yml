@@ -3,7 +3,7 @@ name: Run Python Data Engine
 on:
   workflow_dispatch: # গিটহাব থেকে ম্যানুয়ালি রান করার জন্য
   repository_dispatch:
-    types: [hosting_trigger] # হোস্টিং থেকে এই টাইপ পাঠিয়ে ট্রিগার করা হবে
+    types: [manual_trigger] # হোস্টিং থেকে এই টাইপ পাঠিয়ে ট্রিগার করা হবে
 
 jobs:
   run-script:
