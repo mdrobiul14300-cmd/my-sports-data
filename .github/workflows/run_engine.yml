@@ -3,7 +3,7 @@ name: Run Python Data Engine
 on:
   workflow_dispatch: # গিটহাব থেকে ম্যানুয়ালি রান করার জন্য
   repository_dispatch:
-    types: [manual_trigger] # হোস্টিং থেকে এই টাইপ পাঠিয়ে ট্রিগার করা হবে
+    types: [manual_trigger] # হোস্টিং থেকে এই টাইপ পাঠিয়ে ট্রিগার করা হবে
 
 jobs:
   run-script:
@@ -23,8 +23,15 @@ jobs:
 
     - name: 🚀 Execute Engine
       env:
+        # 🌐 সার্ভার ১ এর সিক্রেটস (পুরোনো)
         PHP_TARGET_URL: ${{ secrets.PHP_TARGET_URL }}
         PHP_SECRET_KEY: ${{ secrets.PHP_SECRET_KEY }}
+        
+        # 🌐 সার্ভার ২ এর সিক্রেটস (নতুন - যা আগে মিসিং ছিল)
+        PHP_TARGET_URL_2: ${{ secrets.PHP_TARGET_URL_2 }}
+        PHP_SECRET_KEY_2: ${{ secrets.PHP_SECRET_KEY_2 }}
+        
+        # 🔐 ডিক্রিপশন ও ফায়ারবেস সিক্রেটস
         DEFAULT_IVANZ_BASE: ${{ secrets.DEFAULT_IVANZ_BASE }}
         FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
